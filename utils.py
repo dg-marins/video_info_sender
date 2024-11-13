@@ -71,27 +71,47 @@ class Utils:
         """
         return self.read_config_json_data().get("app").get("servidor_id")
     
-    def get_list_of_all_videos_info(self, car_path: str) -> List[Dict[str, Any]]:
-        """Coleta informações de todos os vídeos em um diretório específico.
+    def get_list_of_all_videos_info(self, car_path):
+        list_of_all_informations = []
 
-        Args:
-            car_path (str): Caminho para o diretório do carro.
+        try:
+            car_path = Path(car_path)
+            for camera_dir in car_path.iterdir():
+                if camera_dir.is_dir():
+                    for date_dir in camera_dir.iterdir():
+                        if date_dir.is_dir():
+                            for file_path in date_dir.iterdir():
+                                if file_path.is_file():
+                                    try:
+                                        # Extrair informações do nome do arquivo
+                                        file_name = file_path.name
+                                        channel = int(camera_dir.name[-1])  # Converte 'cameraX' para int X
+                                        video_date = datetime.strptime(file_name[:8], "%Y%m%d").strftime("%Y-%m-%d")
+                                        video_time = f"{file_name[8:10]}:{file_name[10:12]}:00"
+                                        
+                                        # Dados adicionais
+                                        file_size_kb = file_path.stat().st_size / 1024
+                                        video_duration = self.get_video_duration(str(file_path))
 
-        Returns:
-            List[Dict[str, Any]]: Lista de dicionários contendo informações dos vídeos.
-        """
-        car_path = Path(car_path)
-        videos_info = []
-        
-        for video_file in car_path.glob("*.mp4"):  # Supondo que os vídeos sejam .mp4
-            duration = self.get_video_duration(video_file)
-            videos_info.append({
-                "name": video_file.name,
-                "duration": duration,
-                "path": str(video_file)
-            })
-        
-        return videos_info
+                                        # Montar o dicionário com as informações
+                                        data = {
+                                            "video_file": file_name,
+                                            "channel": channel,
+                                            "data_video": video_date,
+                                            "hora_video": video_time,
+                                            "tamanho": file_size_kb,
+                                            "duracao": str(int(video_duration)),
+                                            "path_arquivo": str(file_path.parent)
+                                        }
+
+                                        list_of_all_informations.append(data)
+
+                                    except Exception as e:
+                                        print(f"Erro ao processar o arquivo {file_path}: {e}")
+        except Exception as e:
+            print(f"Erro ao acessar o diretório {car_path}: {e}")
+
+        return list_of_all_informations
 
     def get_formated_data_to_send(self, car_id: str, videos_info: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Formata os dados para envio à API.
