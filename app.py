@@ -20,9 +20,10 @@ if __name__ == '__main__':
 
         app_config = config_file.get("app")
 
-        logging.info("Pegando carros na API ...")
+        logging.info("Carregando carros da API ...")
         api_cars = api_sectrans.get_cars_by_company_id(app_config.get("servidor_id"))
 
+        logging.info("Carregando carros do servidor ...")
         server_cars = os.listdir(app_config.get("source_video_path"))
 
         cars_to_process = []
