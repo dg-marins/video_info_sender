@@ -4,6 +4,7 @@ from datetime import datetime
 import ffmpeg
 from pathlib import Path
 from typing import List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -71,49 +72,67 @@ class Utils:
         """
         return self.read_config_json_data().get("app").get("servidor_id")
     
+    def process_video_info(self, file_path, camera_dir, date_dir):
+        try:
+            # Extrair informações do nome do arquivo
+            file_name = file_path.name
+            channel = int(camera_dir.name[-1])  # Converte 'cameraX' para int X
+            video_date = datetime.strptime(file_name[:8], "%Y%m%d").strftime("%Y-%m-%d")
+            video_time = f"{file_name[8:10]}:{file_name[10:12]}:00"
+            
+            # Dados adicionais
+            file_size_kb = file_path.stat().st_size / 1024
+            video_duration = self.get_video_duration(str(file_path))
+
+            # Montar o dicionário com as informações
+            data = {
+                "video_file": file_name,
+                "channel": channel,
+                "data_video": video_date,
+                "hora_video": video_time,
+                "tamanho": file_size_kb,
+                "duracao": str(int(video_duration)),
+                "path_arquivo": str(file_path.parent)
+            }
+            
+            return data
+
+        except Exception as e:
+            print(f"Erro ao processar o arquivo {file_path}: {e}")
+            return None
+
     def get_list_of_all_videos_info(self, car_path):
         list_of_all_informations = []
-
+        
         try:
             car_path = Path(car_path)
-            for camera_dir in car_path.iterdir():
-                if camera_dir.is_dir():
-                    for date_dir in camera_dir.iterdir():
-                        if date_dir.is_dir():
-                            for file_path in date_dir.iterdir():
-                                if file_path.is_file():
-                                    try:
-                                        # Extrair informações do nome do arquivo
-                                        file_name = file_path.name
-                                        channel = int(camera_dir.name[-1])  # Converte 'cameraX' para int X
-                                        video_date = datetime.strptime(file_name[:8], "%Y%m%d").strftime("%Y-%m-%d")
-                                        video_time = f"{file_name[8:10]}:{file_name[10:12]}:00"
-                                        
-                                        # Dados adicionais
-                                        file_size_kb = file_path.stat().st_size / 1024
-                                        video_duration = self.get_video_duration(str(file_path))
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = []
+                
+                # Percorrer os diretórios e adicionar as tarefas ao executor
+                for camera_dir in car_path.iterdir():
+                    if camera_dir.is_dir():
+                        for date_dir in camera_dir.iterdir():
+                            if date_dir.is_dir():
+                                for file_path in date_dir.iterdir():
+                                    if file_path.is_file():
+                                        futures.append(
+                                            executor.submit(self.process_video_info, file_path, camera_dir, date_dir)
+                                        )
+                
+                # Aguardar as tarefas terminarem e coletar os resultados
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result is not None:
+                        list_of_all_informations.append(result)
 
-                                        # Montar o dicionário com as informações
-                                        data = {
-                                            "video_file": file_name,
-                                            "channel": channel,
-                                            "data_video": video_date,
-                                            "hora_video": video_time,
-                                            "tamanho": file_size_kb,
-                                            "duracao": str(int(video_duration)),
-                                            "path_arquivo": str(file_path.parent)
-                                        }
-
-                                        list_of_all_informations.append(data)
-
-                                    except Exception as e:
-                                        print(f"Erro ao processar o arquivo {file_path}: {e}")
         except Exception as e:
             print(f"Erro ao acessar o diretório {car_path}: {e}")
 
-        return list_of_all_informations
+        finally:
+            return list_of_all_informations
 
-    def get_formated_data_to_send(self, car_id: str, videos_info: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def get_formated_data_to_send(self, car_id: str, empresa_id: int, servidor_id: int, videos_info: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Formata os dados para envio à API.
 
         Args:
@@ -124,6 +143,8 @@ class Utils:
             Dict[str, Any]: Dados formatados para envio.
         """
         return {
-            "car_id": car_id,
+            "carro": car_id,
+            "empresa": empresa_id,
+            "servidor": servidor_id,
             "videos": videos_info
         }

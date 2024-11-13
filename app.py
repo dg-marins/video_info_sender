@@ -47,7 +47,8 @@ if __name__ == '__main__':
             logging.info(f'[{car.get("name")}] Iniciando coleta de informações de vídeos.')
             videos_info = util.get_list_of_all_videos_info(car_path)
 
-            formater_send_data = util.get_formated_data_to_send(car["id"], videos_info)
+            formater_send_data = util.get_formated_data_to_send(car["id"],app_config.get("empresa_id"),
+                                                                app_config.get("servidor_id"), videos_info)
             api_sectrans.send_videos_info(formater_send_data)
             logging.info(f'[{car["name"]}] Fim do processamento.')
 
