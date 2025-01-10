@@ -21,7 +21,7 @@ if __name__ == '__main__':
         app_config = config_file.get("app")
 
         logging.info("Carregando carros da API ...")
-        api_cars = api_sectrans.get_cars_by_company_id(app_config.get("servidor_id"))
+        api_cars = api_sectrans.get_cars_by_company_id(app_config.get("empresa_id"))
 
         logging.info("Carregando carros do servidor ...")
         server_cars = os.listdir(app_config.get("source_video_path"))
@@ -46,6 +46,7 @@ if __name__ == '__main__':
 
             logging.info(f'[{car.get("name")}] Iniciando coleta de informações de vídeos.')
             videos_info = util.get_list_of_all_videos_info(car_path)
+
 
             formater_send_data = util.get_formated_data_to_send(car["id"],app_config.get("empresa_id"),
                                                                 app_config.get("servidor_id"), videos_info)

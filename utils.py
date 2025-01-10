@@ -16,7 +16,6 @@ class VideoDurationError(Exception):
 class Utils:
     def __init__(self, config_path: str = "config.json") -> None:
         self.config_path = Path(config_path)
-        self.cache_duration = {}
 
     def read_config_json_data(self) -> Dict[str, Any]:
         """Lê os dados do arquivo de configuração JSON.
@@ -40,14 +39,11 @@ class Utils:
         Raises:
             VideoDurationError: Se houver um erro ao obter a duração.
         """
-        if file_path in self.cache_duration:
-            return self.cache_duration[file_path]
 
         try:
             file_path = Path(file_path).resolve()
             probe = ffmpeg.probe(str(file_path))
             video_duration = float(probe['format']['duration'])  # Duração em segundos
-            self.cache_duration[file_path] = video_duration
         except ffmpeg.Error as e:
             logging.error(f"Erro ao obter a duração do vídeo: {file_path}", exc_info=e)
             raise VideoDurationError(f"Erro ao obter a duração do vídeo: {file_path}") from e
@@ -72,17 +68,18 @@ class Utils:
         """
         return self.read_config_json_data().get("app").get("servidor_id")
     
-    def process_video_info(self, file_path, camera_dir, date_dir):
+    def process_video_info(self, file_path, camera_dir):
         try:
             # Extrair informações do nome do arquivo
             file_name = file_path.name
             channel = int(camera_dir.name[-1])  # Converte 'cameraX' para int X
             video_date = datetime.strptime(file_name[:8], "%Y%m%d").strftime("%Y-%m-%d")
-            video_time = f"{file_name[8:10]}:{file_name[10:12]}:00"
+            video_time = f"{file_name[8:10]}:{file_name[10:12]}:{file_name[12:14]}"
             
             # Dados adicionais
             file_size_kb = file_path.stat().st_size / 1024
-            video_duration = self.get_video_duration(str(file_path))
+            # video_duration = self.get_video_duration(str(file_path))
+            video_duration = '60'
 
             # Montar o dicionário com as informações
             data = {
@@ -117,7 +114,7 @@ class Utils:
                                 for file_path in date_dir.iterdir():
                                     if file_path.is_file():
                                         futures.append(
-                                            executor.submit(self.process_video_info, file_path, camera_dir, date_dir)
+                                            executor.submit(self.process_video_info, file_path, camera_dir)
                                         )
                 
                 # Aguardar as tarefas terminarem e coletar os resultados

@@ -3,13 +3,13 @@
         "api_host": "http://localhost",
         "api_port": 8000,
         "api_url": "/api/videos/register",
-        "api_token": ""
+        "api_token": "33ac9f2c4e1e5ff33b004ec7eb6fc2c016f0c4f7"
     },
     
     "app": {
         "source_video_path": "C:/Users/Douglas/Desktop/home/publico/imagens/",
-        "empresa_id": 1,
-        "servidor_id": 1
+        "empresa_id": 44,
+        "servidor_id": 17
     }
 
 }
